@@ -38,7 +38,7 @@ const configPrefix = "stormi:config:"
 
 const updateConfig = "updateConfig"
 
-func (client *Client) getConfig(name string) *ConfigInfo {
+func (client *Client) GetConfig(name string) *ConfigInfo {
 	configStr, _ := client.RipcClient.RedisClient.Get(client.ctx, configPrefix+name).Result()
 	var c ConfigInfo
 	json.Unmarshal([]byte(configStr), &c)
@@ -47,12 +47,12 @@ func (client *Client) getConfig(name string) *ConfigInfo {
 
 func (client *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
 	listener := client.RipcClient.NewListener(client.ctx, configPrefix+name)
-	config := client.getConfig(name)
+	config := client.GetConfig(name)
 	handler(config)
 	go func() {
 		listener.Listen(func(msg string) {
 			if msg == updateConfig {
-				cfg := client.getConfig(name)
+				cfg := client.GetConfig(name)
 				if cfg.ToString() != config.ToString() {
 					config = cfg
 					handler(config)
@@ -62,7 +62,7 @@ func (client *Client) Connect(name string, handler func(configInfo *ConfigInfo))
 	}()
 	for {
 		time.Sleep(10 * time.Second)
-		cfg := client.getConfig(name)
+		cfg := client.GetConfig(name)
 		if cfg.ToString() != config.ToString() {
 			config = cfg
 			handler(config)
