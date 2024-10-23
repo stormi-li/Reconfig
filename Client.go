@@ -9,7 +9,7 @@ import (
 )
 
 type Client struct {
-	ripcClient *ripc.Client
+	RipcClient *ripc.Client
 	ctx        context.Context
 }
 
@@ -20,7 +20,7 @@ func NewClient(addr string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.ripcClient = ripcC
+	client.RipcClient = ripcC
 	return &client, nil
 }
 
@@ -28,7 +28,7 @@ func (client *Client) NewConfig(name string, addr string) *Config {
 	config := Config{
 		name:       name,
 		Info:       &ConfigInfo{Addr: addr},
-		ripcClient: client.ripcClient,
+		ripcClient: client.RipcClient,
 		ctx:        client.ctx,
 	}
 	return &config
@@ -39,14 +39,14 @@ const configPrefix = "stormi:config:"
 const updateConfig = "updateConfig"
 
 func (client *Client) getConfig(name string) *ConfigInfo {
-	configStr, _ := client.ripcClient.RedisClient.Get(client.ctx, configPrefix+name).Result()
+	configStr, _ := client.RipcClient.RedisClient.Get(client.ctx, configPrefix+name).Result()
 	var c ConfigInfo
 	json.Unmarshal([]byte(configStr), &c)
 	return &c
 }
 
 func (client *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
-	listener := client.ripcClient.NewListener(client.ctx, configPrefix+name)
+	listener := client.RipcClient.NewListener(client.ctx, configPrefix+name)
 	config := client.getConfig(name)
 	handler(config)
 	go func() {
