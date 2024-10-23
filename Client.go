@@ -52,8 +52,11 @@ func (client *Client) Connect(name string, handler func(configInfo *ConfigInfo))
 	go func() {
 		listener.Listen(func(msg string) {
 			if msg == updateConfig {
-				config = client.getConfig(name)
-				handler(config)
+				cfg := client.getConfig(name)
+				if cfg.ToString() != config.ToString() {
+					config = cfg
+					handler(config)
+				}
 			}
 		})
 	}()
