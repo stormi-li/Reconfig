@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	client, _ := reconfig.NewClient("localhost:6379")
-	config := client.NewConfig("mysql", "localhost:3307")
+	client, _ := reconfig.NewClient("118.25.196.166:6379")
+	client.SetNameSpace("fsf")
+	config := client.NewConfig("mysql", "118.25.196.166:3307")
 	config.Upload(10 * time.Second)
 }

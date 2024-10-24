@@ -11,6 +11,7 @@ import (
 type Client struct {
 	RipcClient *ripc.Client
 	ctx        context.Context
+	namespace  string
 }
 
 func NewClient(addr string) (*Client, error) {
@@ -24,12 +25,18 @@ func NewClient(addr string) (*Client, error) {
 	return &client, nil
 }
 
-func (client *Client) NewConfig(name string, addr string) *Config {
+func (c *Client) SetNameSpace(str string) {
+	c.namespace = str + ":"
+	c.RipcClient.SetNameSpace(str)
+}
+
+func (c *Client) NewConfig(name string, addr string) *Config {
 	config := Config{
 		name:       name,
 		Info:       &ConfigInfo{Addr: addr},
-		ripcClient: client.RipcClient,
-		ctx:        client.ctx,
+		ripcClient: c.RipcClient,
+		ctx:        c.ctx,
+		namespace:  c.namespace,
 	}
 	return &config
 }
@@ -38,21 +45,26 @@ const configPrefix = "stormi:config:"
 
 const updateConfig = "updateConfig"
 
-func (client *Client) GetConfig(name string) *ConfigInfo {
-	configStr, _ := client.RipcClient.RedisClient.Get(client.ctx, configPrefix+name).Result()
-	var c ConfigInfo
-	json.Unmarshal([]byte(configStr), &c)
-	return &c
+func (c *Client) GetConfig(name string) *ConfigInfo {
+	configStr, _ := c.RipcClient.RedisClient.Get(c.ctx, c.namespace+configPrefix+name).Result()
+	var cfg ConfigInfo
+	json.Unmarshal([]byte(configStr), &cfg)
+	return &cfg
 }
 
-func (client *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
-	listener := client.RipcClient.NewListener(client.ctx, configPrefix+name)
-	config := client.GetConfig(name)
+func (c *Client) GetTTL(name string) time.Duration {
+	ttl, _ := c.RipcClient.RedisClient.TTL(c.ctx, c.namespace+configPrefix+name).Result()
+	return ttl
+}
+
+func (c *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
+	listener := c.RipcClient.NewListener(c.ctx, c.namespace+configPrefix+name)
+	config := c.GetConfig(name)
 	handler(config)
 	go func() {
 		listener.Listen(func(msg string) {
 			if msg == updateConfig {
-				cfg := client.GetConfig(name)
+				cfg := c.GetConfig(name)
 				if cfg.ToString() != config.ToString() {
 					config = cfg
 					handler(config)
@@ -62,7 +74,7 @@ func (client *Client) Connect(name string, handler func(configInfo *ConfigInfo))
 	}()
 	for {
 		time.Sleep(10 * time.Second)
-		cfg := client.GetConfig(name)
+		cfg := c.GetConfig(name)
 		if cfg.ToString() != config.ToString() {
 			config = cfg
 			handler(config)

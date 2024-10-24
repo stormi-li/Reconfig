@@ -2,7 +2,7 @@ module github.com/stormi-li/Reconfig
 
 go 1.22.4
 
-require github.com/stormi-li/Ripc v1.0.0
+require github.com/stormi-li/Ripc v1.0.2
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

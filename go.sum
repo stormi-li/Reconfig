@@ -8,3 +8,5 @@ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/stormi-li/Ripc v1.0.0 h1:2ClWha2EUPTqXGvpG84OMBwFRSWem/lp3gT4Rk/KDFU=
 github.com/stormi-li/Ripc v1.0.0/go.mod h1:6hryBwoC4Y+8SOzF2BWiPDWB8X1IzuDtCXpiVIaziZ0=
+github.com/stormi-li/Ripc v1.0.2 h1:a18sIeTtsIx62DDNQbTMnY2btxEEoh4lz8V0DU+yKg8=
+github.com/stormi-li/Ripc v1.0.2/go.mod h1:6hryBwoC4Y+8SOzF2BWiPDWB8X1IzuDtCXpiVIaziZ0=

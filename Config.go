@@ -13,6 +13,7 @@ type Config struct {
 	Info       *ConfigInfo
 	ripcClient *ripc.Client
 	ctx        context.Context
+	namespace  string
 }
 
 type ConfigInfo struct {
@@ -28,12 +29,12 @@ func (c ConfigInfo) ToString() string {
 }
 
 func (c *Config) Upload(ttl time.Duration) {
-	c.ripcClient.RedisClient.Set(c.ctx, configPrefix+c.name, c.Info.ToString(), ttl)
-	c.ripcClient.Notify(c.ctx, configPrefix+c.name, updateConfig)
+	c.ripcClient.RedisClient.Set(c.ctx, c.namespace+configPrefix+c.name, c.Info.ToString(), ttl)
+	c.ripcClient.Notify(c.ctx, c.namespace+configPrefix+c.name, updateConfig)
 }
 
 func (c *Config) Delete() {
-	c.ripcClient.RedisClient.Del(c.ctx, configPrefix+c.name)
+	c.ripcClient.RedisClient.Del(c.ctx, c.namespace+configPrefix+c.name)
 	c.Info.Addr = ""
-	c.ripcClient.Notify(c.ctx, configPrefix+c.name, updateConfig)
+	c.ripcClient.Notify(c.ctx, c.namespace+configPrefix+c.name, updateConfig)
 }
