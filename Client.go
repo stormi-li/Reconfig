@@ -29,7 +29,7 @@ func (c *Client) SetNamespace(namespace string) {
 func (c *Client) NewConfig(name string, addr string) *Config {
 	config := Config{
 		name:        name,
-		Info:        &ConfigInfo{Addr: addr},
+		Info:        &ConfigInfo{Addr: addr, Data: map[string]string{}},
 		ripcClient:  c.ripcClient,
 		redisClient: c.redisClient,
 		Context:     c.Context,
