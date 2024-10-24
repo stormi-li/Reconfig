@@ -5,60 +5,62 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	ripc "github.com/stormi-li/Ripc"
 )
 
 type Client struct {
-	RipcClient *ripc.Client
-	ctx        context.Context
-	namespace  string
+	redisClient *redis.Client
+	ripcClient  *ripc.Client
+	Context     context.Context
+	Namespace   string
 }
 
-func NewClient(addr string) (*Client, error) {
-	client := Client{}
-	client.ctx = context.Background()
-	ripcC, err := ripc.NewClient(addr)
-	if err != nil {
-		return nil, err
-	}
-	client.RipcClient = ripcC
-	return &client, nil
+func NewClient(redisClient *redis.Client) *Client {
+	ripcClient := ripc.NewClient(redisClient)
+	return &Client{redisClient: redisClient, ripcClient: ripcClient, Context: ripcClient.Context, Namespace: ""}
 }
 
-func (c *Client) SetNameSpace(str string) {
-	c.namespace = str + ":"
-	c.RipcClient.SetNameSpace(str)
+func (c *Client) SetNamespace(namespace string) {
+	c.Namespace = namespace + ":"
+	c.ripcClient.SetNamespace(namespace)
 }
 
 func (c *Client) NewConfig(name string, addr string) *Config {
 	config := Config{
-		name:       name,
-		Info:       &ConfigInfo{Addr: addr},
-		ripcClient: c.RipcClient,
-		ctx:        c.ctx,
-		namespace:  c.namespace,
+		name:        name,
+		Info:        &ConfigInfo{Addr: addr},
+		ripcClient:  c.ripcClient,
+		redisClient: c.redisClient,
+		Context:     c.Context,
 	}
 	return &config
 }
 
-const configPrefix = "stormi:config:"
+const ConfigPrefix = "stormi:config:"
 
 const updateConfig = "updateConfig"
 
 func (c *Client) GetConfig(name string) *ConfigInfo {
-	configStr, _ := c.RipcClient.RedisClient.Get(c.ctx, c.namespace+configPrefix+name).Result()
+	//---------------------------------------------------redis代码
+	configStr, _ := c.redisClient.Get(c.Context, c.Namespace+ConfigPrefix+name).Result()
 	var cfg ConfigInfo
 	json.Unmarshal([]byte(configStr), &cfg)
 	return &cfg
 }
 
+func (c *Client) GetConfigNames() []string {
+	return GetKeysByNamespace(c.redisClient, c.Namespace+ConfigPrefix)
+}
+
 func (c *Client) GetTTL(name string) time.Duration {
-	ttl, _ := c.RipcClient.RedisClient.TTL(c.ctx, c.namespace+configPrefix+name).Result()
+	//---------------------------------------------------redis代码
+	ttl, _ := c.redisClient.TTL(c.Context, c.Namespace+ConfigPrefix+name).Result()
 	return ttl
 }
 
 func (c *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
-	listener := c.RipcClient.NewListener(c.ctx, c.namespace+configPrefix+name)
+	listener := c.ripcClient.NewListener(ConfigPrefix + name)
 	config := c.GetConfig(name)
 	handler(config)
 	go func() {
@@ -80,4 +82,33 @@ func (c *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
 			handler(config)
 		}
 	}
+}
+
+func GetKeysByNamespace(redisClient *redis.Client, namespace string) []string {
+	var keys []string
+	cursor := uint64(0)
+
+	for {
+		// 使用 SCAN 命令获取键名
+		res, newCursor, err := redisClient.Scan(context.Background(), cursor, namespace+"*", 0).Result()
+		if err != nil {
+			return nil
+		}
+
+		// 处理键名，去掉命名空间
+		for _, key := range res {
+			// 去掉命名空间部分
+			keyWithoutNamespace := key[len(namespace):]
+			keys = append(keys, keyWithoutNamespace)
+		}
+
+		cursor = newCursor
+
+		// 如果游标为0，则结束循环
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return keys
 }
