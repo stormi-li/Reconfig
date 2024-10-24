@@ -31,3 +31,9 @@ func (c *Config) Upload(ttl time.Duration) {
 	c.ripcClient.RedisClient.Set(c.ctx, configPrefix+c.name, c.Info.ToString(), ttl)
 	c.ripcClient.Notify(c.ctx, configPrefix+c.name, updateConfig)
 }
+
+func (c *Config) Delete() {
+	c.ripcClient.RedisClient.Del(c.ctx, configPrefix+c.name)
+	c.Info.Addr = ""
+	c.ripcClient.Notify(c.ctx, configPrefix+c.name, updateConfig)
+}
