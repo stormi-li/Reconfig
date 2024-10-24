@@ -14,7 +14,7 @@ func main() {
 	client := reconfig.NewClient(redisClient)
 	client.SetNamespace("123")
 	config := client.NewConfig("mysql", "118.25.196.166:3306")
-	config.Upload(5*time.Second)
+	config.Upload(1000 * time.Second)
 	time.Sleep(1 * time.Second)
-	// config.Delete()
+	config.Delete()
 }
