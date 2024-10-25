@@ -18,7 +18,7 @@ type Client struct {
 
 func NewClient(redisClient *redis.Client, namespace string) *Client {
 	ripcClient := ripc.NewClient(redisClient, namespace)
-	return &Client{redisClient: redisClient, ripcClient: ripcClient, ctx: context.Background(), namespace: namespace}
+	return &Client{redisClient: redisClient, ripcClient: ripcClient, ctx: context.Background(), namespace: namespace + ":"}
 }
 
 func (c *Client) NewConfig(name string, addr string) *Config {
