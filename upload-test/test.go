@@ -14,6 +14,6 @@ func main() {
 		Password: password,
 	})
 	client := reconfig.NewClient(redisClient, "reconfig-namespace")
-	cfg := client.NewConfig("mysql", "localhost:1234")
+	cfg := client.NewConfig("mysql", "localhost:12234")
 	cfg.Upload()
 }

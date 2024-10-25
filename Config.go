@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	ripcClient  *ripc.Client
 	redisClient *redis.Client
+	ripcClient  *ripc.Client
 	Name        string
 	Addr        string
 	ConfigId    int
@@ -27,12 +27,12 @@ func (c Config) ToString() string {
 
 func (c *Config) Upload() {
 	//---------------------------------------------------redis代码
-	c.redisClient.Set(c.ctx, c.namespace+ConfigPrefix+c.Name, c.ToString(), 0)
-	c.ripcClient.Notify(ConfigPrefix+c.Name, updateConfig)
+	c.redisClient.Set(c.ctx, c.namespace+c.Name, c.ToString(), 0)
+	c.ripcClient.Notify(c.namespace+c.Name, updateConfig)
 }
 
 func (c *Config) Delete() {
 	//---------------------------------------------------redis代码
-	c.redisClient.Del(c.ctx, c.namespace+ConfigPrefix+c.Name)
-	c.ripcClient.Notify(ConfigPrefix+c.Name, updateConfig)
+	c.redisClient.Del(c.ctx, c.namespace+c.Name)
+	c.ripcClient.Notify(c.namespace+c.Name, updateConfig)
 }

@@ -12,34 +12,38 @@ import (
 type Client struct {
 	redisClient *redis.Client
 	ripcClient  *ripc.Client
-	ctx         context.Context
 	namespace   string
+	ctx         context.Context
 }
 
+const configPrefix = "stormi:config:"
+
 func NewClient(redisClient *redis.Client, namespace string) *Client {
-	ripcClient := ripc.NewClient(redisClient, namespace)
-	return &Client{redisClient: redisClient, ripcClient: ripcClient, ctx: context.Background(), namespace: namespace + ":"}
+	return &Client{
+		redisClient: redisClient,
+		ripcClient:  ripc.NewClient(redisClient, namespace),
+		namespace:   namespace + ":" + configPrefix,
+		ctx:         context.Background(),
+	}
 }
 
 func (c *Client) NewConfig(name string, addr string) *Config {
 	return &Config{
+		redisClient: c.redisClient,
+		ripcClient:  c.ripcClient,
 		Name:        name,
 		Addr:        addr,
 		Data:        map[string]string{},
-		ripcClient:  c.ripcClient,
-		redisClient: c.redisClient,
-		ctx:         c.ctx,
 		namespace:   c.namespace,
+		ctx:         c.ctx,
 	}
 }
-
-const ConfigPrefix = "stormi:config:"
 
 const updateConfig = "updateConfig"
 
 func (c *Client) GetConfig(name string) *Config {
 	//---------------------------------------------------redis代码
-	configStr, _ := c.redisClient.Get(c.ctx, c.namespace+ConfigPrefix+name).Result()
+	configStr, _ := c.redisClient.Get(c.ctx, c.namespace+name).Result()
 	var cfg Config
 	json.Unmarshal([]byte(configStr), &cfg)
 	cfg.ctx = c.ctx
@@ -50,11 +54,11 @@ func (c *Client) GetConfig(name string) *Config {
 }
 
 func (c *Client) GetConfigNames() []string {
-	return GetKeysByNamespace(c.redisClient, c.namespace+ConfigPrefix)
+	return GetKeysByNamespace(c.redisClient, c.namespace)
 }
 
 func (c *Client) Listen(name string, handler func(config *Config)) {
-	listener := c.ripcClient.NewListener(ConfigPrefix + name)
+	listener := c.ripcClient.NewListener(c.namespace + name)
 	config := c.GetConfig(name)
 	handler(config)
 	go func() {
