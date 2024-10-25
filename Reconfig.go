@@ -12,54 +12,48 @@ import (
 type Client struct {
 	redisClient *redis.Client
 	ripcClient  *ripc.Client
-	Context     context.Context
-	Namespace   string
+	ctx         context.Context
+	namespace   string
 }
 
-func NewClient(redisClient *redis.Client) *Client {
-	ripcClient := ripc.NewClient(redisClient)
-	return &Client{redisClient: redisClient, ripcClient: ripcClient, Context: ripcClient.Context, Namespace: ""}
-}
-
-func (c *Client) SetNamespace(namespace string) {
-	c.Namespace = namespace + ":"
-	c.ripcClient.SetNamespace(namespace)
+func NewClient(redisClient *redis.Client, namespace string) *Client {
+	ripcClient := ripc.NewClient(redisClient, namespace)
+	return &Client{redisClient: redisClient, ripcClient: ripcClient, ctx: context.Background(), namespace: namespace}
 }
 
 func (c *Client) NewConfig(name string, addr string) *Config {
-	config := Config{
-		name:        name,
-		Info:        &ConfigInfo{Addr: addr, Data: map[string]string{}},
+	return &Config{
+		Name:        name,
+		Addr:        addr,
+		Data:        map[string]string{},
 		ripcClient:  c.ripcClient,
 		redisClient: c.redisClient,
-		Context:     c.Context,
+		ctx:         c.ctx,
+		namespace:   c.namespace,
 	}
-	return &config
 }
 
 const ConfigPrefix = "stormi:config:"
 
 const updateConfig = "updateConfig"
 
-func (c *Client) GetConfig(name string) *ConfigInfo {
+func (c *Client) GetConfig(name string) *Config {
 	//---------------------------------------------------redis代码
-	configStr, _ := c.redisClient.Get(c.Context, c.Namespace+ConfigPrefix+name).Result()
-	var cfg ConfigInfo
+	configStr, _ := c.redisClient.Get(c.ctx, c.namespace+ConfigPrefix+name).Result()
+	var cfg Config
 	json.Unmarshal([]byte(configStr), &cfg)
+	cfg.ctx = c.ctx
+	cfg.namespace = c.namespace
+	cfg.redisClient = c.redisClient
+	cfg.ripcClient = c.ripcClient
 	return &cfg
 }
 
 func (c *Client) GetConfigNames() []string {
-	return GetKeysByNamespace(c.redisClient, c.Namespace+ConfigPrefix)
+	return GetKeysByNamespace(c.redisClient, c.namespace+ConfigPrefix)
 }
 
-func (c *Client) GetTTL(name string) time.Duration {
-	//---------------------------------------------------redis代码
-	ttl, _ := c.redisClient.TTL(c.Context, c.Namespace+ConfigPrefix+name).Result()
-	return ttl
-}
-
-func (c *Client) Connect(name string, handler func(configInfo *ConfigInfo)) {
+func (c *Client) Listen(name string, handler func(config *Config)) {
 	listener := c.ripcClient.NewListener(ConfigPrefix + name)
 	config := c.GetConfig(name)
 	handler(config)

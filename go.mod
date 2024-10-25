@@ -4,7 +4,7 @@ go 1.22.4
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/stormi-li/Ripc v1.0.3
+	github.com/stormi-li/Ripc v1.0.4
 )
 
 require (
