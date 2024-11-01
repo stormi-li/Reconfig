@@ -20,19 +20,29 @@ type Config struct {
 	ctx         context.Context
 }
 
+func newConfig(redisClient *redis.Client, ripcClient *ripc.Client, name string, addr string, namespace string) *Config {
+	return &Config{
+		redisClient: redisClient,
+		ripcClient:  ripcClient,
+		Name:        name,
+		Addr:        addr,
+		Data:        map[string]string{},
+		namespace:   namespace,
+		ctx:         context.Background(),
+	}
+}
+
 func (c Config) ToString() string {
 	bs, _ := json.MarshalIndent(c, " ", "  ")
 	return string(bs)
 }
 
 func (c *Config) Upload() {
-	//---------------------------------------------------redis代码
 	c.redisClient.Set(c.ctx, c.namespace+c.Name, c.ToString(), 0)
-	c.ripcClient.Notify(c.namespace+c.Name, updateConfig)
+	c.ripcClient.Notify(c.namespace+c.Name, const_updateConfig)
 }
 
 func (c *Config) Delete() {
-	//---------------------------------------------------redis代码
 	c.redisClient.Del(c.ctx, c.namespace+c.Name)
-	c.ripcClient.Notify(c.namespace+c.Name, updateConfig)
+	c.ripcClient.Notify(c.namespace+c.Name, const_updateConfig)
 }

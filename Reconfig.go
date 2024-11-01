@@ -16,30 +16,18 @@ type Client struct {
 	ctx         context.Context
 }
 
-const configPrefix = "stormi:config:"
-
 func NewClient(redisClient *redis.Client, namespace string) *Client {
 	return &Client{
 		redisClient: redisClient,
 		ripcClient:  ripc.NewClient(redisClient, namespace),
-		namespace:   namespace + ":" + configPrefix,
+		namespace:   namespace + const_splitChar + const_prefix,
 		ctx:         context.Background(),
 	}
 }
 
 func (c *Client) NewConfig(name string, addr string) *Config {
-	return &Config{
-		redisClient: c.redisClient,
-		ripcClient:  c.ripcClient,
-		Name:        name,
-		Addr:        addr,
-		Data:        map[string]string{},
-		namespace:   c.namespace,
-		ctx:         c.ctx,
-	}
+	return newConfig(c.redisClient, c.ripcClient, name, addr, c.namespace)
 }
-
-const updateConfig = "updateConfig"
 
 func (c *Client) GetConfig(name string) *Config {
 	//---------------------------------------------------redis代码
@@ -54,7 +42,7 @@ func (c *Client) GetConfig(name string) *Config {
 }
 
 func (c *Client) GetConfigNames() []string {
-	return GetKeysByNamespace(c.redisClient, c.namespace)
+	return getKeysByNamespace(c.redisClient, c.namespace)
 }
 
 func (c *Client) Listen(name string, handler func(config *Config)) {
@@ -63,7 +51,7 @@ func (c *Client) Listen(name string, handler func(config *Config)) {
 	handler(config)
 	go func() {
 		listener.Listen(func(msg string) {
-			if msg == updateConfig {
+			if msg == const_updateConfig {
 				cfg := c.GetConfig(name)
 				if cfg.ToString() != config.ToString() {
 					config = cfg
@@ -82,31 +70,26 @@ func (c *Client) Listen(name string, handler func(config *Config)) {
 	}
 }
 
-func GetKeysByNamespace(redisClient *redis.Client, namespace string) []string {
+func getKeysByNamespace(redisClient *redis.Client, namespace string) []string {
 	var keys []string
 	cursor := uint64(0)
-
 	for {
 		// 使用 SCAN 命令获取键名
 		res, newCursor, err := redisClient.Scan(context.Background(), cursor, namespace+"*", 0).Result()
 		if err != nil {
 			return nil
 		}
-
 		// 处理键名，去掉命名空间
 		for _, key := range res {
 			// 去掉命名空间部分
 			keyWithoutNamespace := key[len(namespace):]
 			keys = append(keys, keyWithoutNamespace)
 		}
-
 		cursor = newCursor
-
 		// 如果游标为0，则结束循环
 		if cursor == 0 {
 			break
 		}
 	}
-
 	return keys
 }
